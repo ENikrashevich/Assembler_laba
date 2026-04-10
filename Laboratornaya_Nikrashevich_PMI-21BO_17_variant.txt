@@ -1,0 +1,179 @@
+;Лабораторная работа по архитектуре компьютеров
+;подготовил студент группы ПМИ-21БО 
+;Никрашевич Егор, вариант 17
+Format ELF64 
+
+macro numtostr num,str ;перевод из числа в строку 
+{
+local notminus,numtostrloopl,numtostrloop2
+mov rax,[num]
+lea rdi,[str] 
+cmp rax,0 
+jnl notminus 
+mov byte[rdi], '-' 
+inc rdi 
+neg rax 
+notminus:
+xor cx,cx 
+mov rbx,10 
+numtostrloopl:
+xor rdx,rdx 
+div rbx 
+add dx,'O' 
+push dx 
+inc cx
+test rax,rax 
+jnz numtostrloopl1 
+lea rdi,[str] 
+numtostrloop2: 
+pop dx
+mov byte[rdi],dl
+inc rdi
+dec cx
+test cx,cx
+jnz numtostrloop2
+}
+
+macro cout str,len ;вывод на консоль
+{
+mov rdi,1 
+lea rsi,[str] 
+mov rdx,len 
+mov rax,l 
+syscall
+}
+
+macro cin str,len ;считывание с консоли
+{
+mov rdi,0 
+lea rsi,[str] 
+mov rdx,len 
+mov rax,0 
+syscall
+}
+
+macro strtonum str,num ;перевод из строки в число
+{
+local loop1,end
+lea rsi,[str] 
+xor rax,rax 
+xor rcx,rcx
+loop1:
+movzx rdx,byte[rsi+rcx]
+test rdx,rdx
+jz end
+sub rdx,'0'
+imul rax,rax,10
+add rax,rdx
+inc rcx
+jnz loop1
+end:
+mov [num],rax
+}
+
+macro MULLaba num,num2 ;умножение т.к. по заданию им пользоваться запрещено
+{
+local loopMUL,loopMULend
+xor rdx,rdx
+mov rdx,[num2]
+xor rax,rax
+mov rax,[num]
+dec rdx
+loopMUL:
+test rdx,rdx 
+jz loopMULend 
+add [num],rax 
+dec rdx 
+jnz loopMUL 
+loopMULend:
+}
+
+macro length str ;вычисление длины строки
+{
+local loopLength 
+xor rsi,rsi 
+mov rsi,str 
+xor rax,rax 
+dec rax 
+loopLength:
+inc rax
+cmp byte[rsi+rax],0 
+jne loopLength
+}
+
+section '.data' writeable
+nocolor dq 27,'[Om',0 
+color dq 27,'[32m1,0
+str1 db 'Введите числа A и B' ,10,0
+endle dq ' ',10,0
+num1 dq ' ' ,0
+num2 dq ' ' , 0
+A dq 0
+B dq 0
+tmpnum1 dq 0 
+tmpnum2 dq 13 
+tmpnum3 dq 0 
+tmpstr dq ' ',0 
+strspace dq ' ',0
+section '.text' executable
+public main
+main:
+mov rbp,rsp 
+and rsp,-16
+
+
+;X[i+l] = X[i]*13+A данное нам уравнение
+cout str1,33 
+cin num1,1 
+cin strspace,1 
+cin num2,1 
+strtonum num1,A 
+strtonum num2,B
+
+;базовая инициализация регистров
+xor rcx,rcx 
+mov rcx,[B] 
+test rcx,rcx 
+jz labaend 
+cout num1,1 
+cout endle,2
+xor rcx,rcx 
+xor rbx,rbx 
+mov rbx,[A] 
+mov [tmpnum1],rbx 
+mov rcx,[B] 
+mov [tmpnum3],rcx 
+dec [tmpnum3] 
+
+;начало цикла по поиску чисел
+labastart:
+xor rcx,rcx 
+mov rcx,[tmpnum3] 
+test rcx,rcx 
+jz labaend
+
+;основное решение уравнения и вывод
+MULLaba tmpnum1,tmpnum2 
+add [tmpnum1],rbx
+numtostr tmpnum1,tmpstr
+length tmpstr
+cout tmpstr,rax
+cout endle,2
+
+;переинициализация регистров для дальнейшей работы
+;т.к. часть из них используются в макросах
+xor rbx,rbx
+mov rbx,[A]
+xor rcx,rcx
+dec [tmpnum3]
+mov rcx,[tmpnum3]
+test rcx,rcx ;проверка нашли ли мы все числа
+jnz labastart
+labaend:
+
+;завершение программы
+mov rax,60 
+syscall 
+mov rsp,rbp 
+xor rax,rax
+ret
